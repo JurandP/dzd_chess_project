@@ -190,16 +190,19 @@ def get_features(df, chess_engine):
     print('features extracted :D')
 
     feature_columns = [
-        "mean_eval",
-        "std_eval",
-        "material_balance",
-        "open_files",
-        "semi_open_files",
-        "heavy_pieces",
-        "light_pieces",
-        "own_pieces_near_king",
-        "enemy_pieces_near_king",
+        # Depth 5 features
+        'mean_eval_5', 'std_eval_5', 'first_eval_5', 'last_eval_5',
+        'max_eval_5', 'min_eval_5', 'eval_diff_5', 'avg_delta_eval_5', 'blunder_count_5',
+        'first_mate_threat_5', 'last_mate_threat_5',
+        # Depth 10 features
+        'mean_eval_10', 'std_eval_10', 'first_eval_10', 'last_eval_10',
+        'max_eval_10', 'min_eval_10', 'eval_diff_10',
+        'first_mate_threat_10', 'last_mate_threat_10',
+        # Handmade features
+        'material_balance', 'open_files', 'semi_open_files',
+        'heavy_pieces', 'light_pieces', 'own_pieces_near_king', 'enemy_pieces_near_king'
     ]
+
     df[feature_columns] = pd.DataFrame(df["features"].tolist(), index=df.index)
     df = df.drop(columns=["features"])
 
