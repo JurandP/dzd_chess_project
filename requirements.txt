@@ -1,2 +1,10 @@
 pandas
+<<<<<<< HEAD
 python-chess
+=======
+python-chess
+scikit-learn
+numpy
+joblib
+tqdm
+>>>>>>> 343f825eaf4afe57ca232d5fa7f0d0056305e83a
