@@ -7,6 +7,8 @@ from sklearn.metrics import mean_squared_error
 import numpy as np
 from tqdm.auto import tqdm
 
+from feature_creation import get_chess_engine_features, extract_features
+
 # Load the CSV data
 print('loading_data ...')
 data = pd.read_csv('../lichess_db_puzzle.csv', nrows=1000)
@@ -16,36 +18,8 @@ print('loaded data :D')
 engine_path = "../stockfish-ubuntu-x86-64-avx2/stockfish/stockfish-ubuntu-x86-64-avx2"
 engine = chess.engine.SimpleEngine.popen_uci(engine_path)
 
-# Function to extract features from FEN and moves
-def extract_features(fen, moves):
-    board = chess.Board(fen)
-    evals = []
-    for i, move in enumerate(moves.split()):
-        try:
-            move = chess.Move.from_uci(move)
-            board.push(move)
-            if i != 0:
-                eval_info = engine.analyse(board, chess.engine.Limit(depth=5))
-                evals.append(eval_info['score'].relative.score(mate_score=10000))
-        except Exception as e:
-            print(board)
-            print(f"Error processing move {move}: {e}")
-            break
-    # Use mean and std of evaluations as features
-    if evals:
-        return [np.mean(evals), np.std(evals)]
-    return [0, 0]
+X, y = get_chess_engine_features(df=data.copy(), chess_engine=engine)
 
-# Process the dataset to add features
-tqdm.pandas()
-data['features'] = data.progress_apply(lambda row: extract_features(row['FEN'], row['Moves']), axis=1)
-print('features extracted :D')
-data[['mean_eval', 'std_eval']] = pd.DataFrame(data['features'].tolist(), index=data.index)
-data = data.drop(columns=['features'])
-
-# Prepare training and test data
-X = data[['mean_eval', 'std_eval']]
-y = data['Rating']
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
 print('data prepared :D')
@@ -71,13 +45,13 @@ joblib.dump(model, 'linear_chess_rating_model.pkl')
 
 # Example usage
 def predict_rating(fen, moves):
-    features = extract_features(fen, moves)
+    features = extract_features(fen, moves, chess_engine=engine)
     return model.predict([features])[0]
-
-# Close the engine
-engine.quit()
 
 # Example prediction
 example_fen = "q3k1nr/1pp1nQpp/3p4/1P2p3/4P3/B1PP1b2/B5PP/5K2 b k - 0 17"
 example_moves = "e8d7 a2e6 d7d8 f7f8"
 print(f"Predicted Rating: {predict_rating(example_fen, example_moves)}")
+
+# Close the engine
+engine.quit()
