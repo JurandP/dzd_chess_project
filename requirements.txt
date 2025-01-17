@@ -1,0 +1,6 @@
+pandas
+python-chess
+scikit-learn
+numpy
+joblib
+tqdm
