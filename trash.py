@@ -4,6 +4,7 @@ import chess.engine
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import StandardScaler
 import numpy as np
 from tqdm.auto import tqdm
 import joblib
@@ -109,6 +110,11 @@ X = data[feature_columns]
 y = data['Rating']
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+scaler = StandardScaler()
+
+X_train_scaled = scaler.fit_transform(X_train)
+X_test_scaled = scaler.transform(X_test)
+
 print(X_test.head())
 
 print('data prepared :D')
@@ -121,11 +127,15 @@ print('model trained :D')
 
 # Evaluate the model
 predictions = model.predict(X_test)
+print(f'X_test:\n{X_test.head()}')
+print(f'y_test:\n{y_test.head()}')
+print(f'predictions:\n{predictions[:5]}')
 mse = mean_squared_error(y_test, predictions)
 print(f" Mean Squared Error: {mse:.2f}")
 
 # Save the model
 joblib.dump(model, 'linear_chess_rating_model.pkl')
+joblib.dump(scaler, 'scaler.pkl')
 
 # Prediction example
 def predict_rating(fen, moves):
