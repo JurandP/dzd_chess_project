@@ -88,38 +88,99 @@ def count_enemy_nearby_pieces(board, color):
 
 
 # Function to extract features
+
 def extract_features(fen, moves, chess_engine):
     board = chess.Board(fen)
-    evals = []
+    evals_depth_5 = []
+    evals_depth_10 = []
+    deltas = []
     handmade_features = {}
+    mate_threats_depth_5 = []
+    mate_threats_depth_10 = []
 
     for i, move in enumerate(moves.split()):
         try:
             move = chess.Move.from_uci(move)
             board.push(move)
-            if i == 0:  # After the first move, calculate handmade features
-                handmade_features["material_balance"] = material_balance(board)
-                handmade_features["open_files"] = count_open_files(board)
-                handmade_features["semi_open_files"] = count_semi_open_files(board)
-                handmade_features["heavy_pieces"] = count_heavy_pieces(board)
-                handmade_features["light_pieces"] = count_light_pieces(board)
-                handmade_features["own_pieces_near_king"] = count_nearby_pieces(
-                    board, board.turn
-                )
-                handmade_features["enemy_pieces_near_king"] = count_enemy_nearby_pieces(
-                    board, not board.turn
-                )
-            else:
-                eval_info = chess_engine.analyse(board, chess.engine.Limit(depth=5))
-                evals.append(eval_info["score"].relative.score(mate_score=10000))
+
+            # Analysis at depth 5
+            eval_info_depth_5 = chess_engine.analyse(board, chess.engine.Limit(depth=5))
+            eval_depth_5 = eval_info_depth_5['score'].relative.score(mate_score=10000)
+            evals_depth_5.append(eval_depth_5)
+
+            # Analysis at depth 10
+            eval_info_depth_10 = chess_engine.analyse(board, chess.engine.Limit(depth=10))
+            eval_depth_10 = eval_info_depth_10['score'].relative.score(mate_score=10000)
+            evals_depth_10.append(eval_depth_10)
+
+            # Evaluate deltas (change in evaluation between moves at depth 5)
+            if len(evals_depth_5) > 1:
+                deltas.append(abs(evals_depth_5[-1] - evals_depth_5[-2]))
+
+            # Mate in X detection
+            if eval_info_depth_5['score'].relative.is_mate():
+                mate_threats_depth_5.append(eval_info_depth_5['score'].relative.mate())
+            if eval_info_depth_10['score'].relative.is_mate():
+                mate_threats_depth_10.append(eval_info_depth_10['score'].relative.mate())
+
+            # Handmade features after first move
+            if i == 0:
+                handmade_features['material_balance'] = material_balance(board)
+                handmade_features['open_files'] = count_open_files(board)
+                handmade_features['semi_open_files'] = count_semi_open_files(board)
+                handmade_features['heavy_pieces'] = count_heavy_pieces(board)
+                handmade_features['light_pieces'] = count_light_pieces(board)
+                handmade_features['own_pieces_near_king'] = count_nearby_pieces(board, board.turn)
+                handmade_features['enemy_pieces_near_king'] = count_enemy_nearby_pieces(board, not board.turn)
         except Exception as e:
-            print(board)
             print(f"Error processing move {move}: {e}")
             break
 
-    eval_features = [np.mean(evals) if evals else 0, np.std(evals) if evals else 0]
-    all_features = eval_features + list(handmade_features.values())
+    # Evaluation features for depth 5
+    eval_features_depth_5 = [
+        np.mean(evals_depth_5) if evals_depth_5 else 0,
+        np.std(evals_depth_5) if evals_depth_5 else 0,
+        evals_depth_5[0] if evals_depth_5 else 0,  # First evaluation
+        evals_depth_5[-1] if evals_depth_5 else 0,  # Last evaluation
+        max(evals_depth_5) if evals_depth_5 else 0,  # Maximum evaluation
+        min(evals_depth_5) if evals_depth_5 else 0,  # Minimum evaluation
+        evals_depth_5[-1] - evals_depth_5[0] if len(evals_depth_5) > 1 else 0,  # Evaluation difference
+        np.mean(deltas) if deltas else 0,  # Average delta
+        len([d for d in deltas if d > 300])  # Blunder count
+    ]
+
+    # Evaluation features for depth 10
+    eval_features_depth_10 = [
+        np.mean(evals_depth_10) if evals_depth_10 else 0,
+        np.std(evals_depth_10) if evals_depth_10 else 0,
+        evals_depth_10[0] if evals_depth_10 else 0,  # First evaluation
+        evals_depth_10[-1] if evals_depth_10 else 0,  # Last evaluation
+        max(evals_depth_10) if evals_depth_10 else 0,  # Maximum evaluation
+        min(evals_depth_10) if evals_depth_10 else 0,  # Minimum evaluation
+        evals_depth_10[-1] - evals_depth_10[0] if len(evals_depth_10) > 1 else 0  # Evaluation difference
+    ]
+
+    # Mate threat features
+    mate_features_depth_5 = [
+        mate_threats_depth_5[0] if mate_threats_depth_5 else 0,  # First mate threat at depth 5
+        mate_threats_depth_5[-1] if mate_threats_depth_5 else 0  # Last mate threat at depth 5
+    ]
+
+    mate_features_depth_10 = [
+        mate_threats_depth_10[0] if mate_threats_depth_10 else 0,  # First mate threat at depth 10
+        mate_threats_depth_10[-1] if mate_threats_depth_10 else 0  # Last mate threat at depth 10
+    ]
+
+    # Combine features
+    all_features = (
+        eval_features_depth_5 +
+        mate_features_depth_5 +
+        eval_features_depth_10 +
+        mate_features_depth_10 +
+        list(handmade_features.values())
+    )
     return all_features
+
 
 def get_features(df, chess_engine):
     extract = partial(extract_features, chess_engine=chess_engine)
