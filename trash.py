@@ -90,7 +90,7 @@ print('loading_data ...')
 data = pd.read_csv('../lichess_db_puzzle.csv', nrows=1000)
 print('loaded data :D')
 
-# Initialize chess engine
+# Initialize chess engine204021.2
 engine_path = "../stockfish-ubuntu-x86-64-avx2/stockfish/stockfish-ubuntu-x86-64-avx2"
 engine = chess.engine.SimpleEngine.popen_uci(engine_path)
 
@@ -122,20 +122,22 @@ print('training model ...')
 
 # Train the model
 model = LinearRegression()
-model.fit(X_train, y_train)
+model.fit(X_train_scaled, y_train)
 print('model trained :D')
 
 # Evaluate the model
-predictions = model.predict(X_test)
-print(f'X_test:\n{X_test.head()}')
+predictions = model.predict(X_test_scaled)
+print(f'X_test:\n{X_test_scaled[:5]}')
 print(f'y_test:\n{y_test.head()}')
 print(f'predictions:\n{predictions[:5]}')
 mse = mean_squared_error(y_test, predictions)
 print(f" Mean Squared Error: {mse:.2f}")
+sanity_mse = mean_squared_error(y_test, np.ones_like(y_test) * np.mean(y_train))
+print(f" Sanity MSE: {sanity_mse:.2f}")
 
 # Save the model
-joblib.dump(model, 'linear_chess_rating_model.pkl')
-joblib.dump(scaler, 'scaler.pkl')
+joblib.dump(model, 'local/linear_chess_rating_model.pkl')
+joblib.dump(scaler, 'local/scaler.pkl')
 
 # Prediction example
 def predict_rating(fen, moves):
