@@ -20,16 +20,15 @@ engine = chess.engine.SimpleEngine.popen_uci(engine_path)
 def extract_features(fen, moves):
     board = chess.Board(fen)
     evals = []
-    for move in moves.split():
+    for i, move in enumerate(moves.split()):
         try:
             move = chess.Move.from_uci(move)
-            if move in board.legal_moves:
-                board.push(move)
+            board.push(move)
+            if i != 0:
                 eval_info = engine.analyse(board, chess.engine.Limit(depth=5))
                 evals.append(eval_info['score'].relative.score(mate_score=10000))
-            else:
-                break
         except Exception as e:
+            print(board)
             print(f"Error processing move {move}: {e}")
             break
     # Use mean and std of evaluations as features
@@ -60,20 +59,23 @@ print('model trained :D')
 
 # Predict and evaluate
 predictions = model.predict(X_test)
-rmse = np.sqrt(mean_squared_error(y_test, predictions))
-print(f"Root Mean Squared Error: {rmse}")
+print(f'X_test:\n{X_test.head()}')
+print(f'y_test:\n{y_test.head()}')
+print(f'predictions:\n{predictions[:5]}')
+rmse = mean_squared_error(y_test, predictions)
+print(f"Root Mean Squared Error: {rmse:.2f}")
 
 # Save the model (optional)
 import joblib
 joblib.dump(model, 'linear_chess_rating_model.pkl')
 
-# Close the engine
-engine.quit()
-
 # Example usage
 def predict_rating(fen, moves):
     features = extract_features(fen, moves)
     return model.predict([features])[0]
+
+# Close the engine
+engine.quit()
 
 # Example prediction
 example_fen = "q3k1nr/1pp1nQpp/3p4/1P2p3/4P3/B1PP1b2/B5PP/5K2 b k - 0 17"
