@@ -1,9 +1,7 @@
 TODO:
 
-2-3 pages technical report
-publish results
-
-code:
-normalize y
-add different models (random forest, xgboost, lightGBM?, ...)
-compute whole / bigger part of dataset
+- sprawdzić co trzeba wrzucić na knowledge pit
+- abstract
+- introduction
+- concusion
+- compute whole / bigger part of dataset

@@ -1,4 +1,3 @@
-from tabnanny import verbose
 import pandas as pd
 import chess
 import chess.engine
@@ -10,9 +9,7 @@ from sklearn.neural_network import MLPRegressor
 from xgboost import XGBRegressor
 from sklearn.neighbors import KNeighborsRegressor
 from sklearn.preprocessing import StandardScaler
-import numpy as np
 from tqdm.auto import tqdm
-import joblib
 import sys
 import pickle
 
@@ -56,9 +53,7 @@ else:
 
     with open('local/y.pkl', 'rb') as f:
         y = pickle.load(f)
-        
-# Close the engine
-engine.quit()
+
 
 # Split data
 X_train, X_test, y_train, y_test = train_test_split(
@@ -71,7 +66,7 @@ y_scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
 y_train_scaler = y_scaler.fit_transform(pd.DataFrame({'y': y_train}))
-y_test_scaler = y_scaler.fit_transform(pd.DataFrame({'y': y_test}))
+y_test_scaler = y_scaler.transform(pd.DataFrame({'y': y_test}))
 
 # Initialize models
 models = {
@@ -103,9 +98,12 @@ print(results_df)
 best_model_name = results_df.sort_values(by="MSE").iloc[0]["Model"]
 print(f"\nBest model: {best_model_name}")
 best_model = models[best_model_name]
-joblib.dump(best_model, f"local/{best_model_name.replace(' ', '_').lower()}_model.pkl")
+with open(f"local/{best_model_name.replace(' ', '_').lower()}_model.pkl", 'wb') as file:
+    pickle.dump(best_model, file)
 
 # Save the scaler
-joblib.dump(scaler, "local/scaler.pkl")
-joblib.dump(y_scaler, "local/y_scaler.pkl")
+with open("local/scaler.pkl", 'wb') as file:
+    pickle.dump(scaler, file)
+with open("local/y_scaler.pkl", 'wb') as file:
+    pickle.dump(y_scaler, file)
 
