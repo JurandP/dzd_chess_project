@@ -38,8 +38,6 @@ scaler = StandardScaler()
 y_scaler = StandardScaler()
 X_train_scaled = scaler.fit_transform(X_train)
 X_test_scaled = scaler.transform(X_test)
-y_train_scaled = y_scaler.fit_transform(y_train)
-y_test_scaled = y_scaler.transform(y_test)
 
 # Initialize models
 models = {
@@ -55,17 +53,8 @@ results = []
 
 for name, model in models.items():
     print(f"Training {name}...")
-    model.fit(X_train_scaled, y_train_scaled)
+    model.fit(X_train_scaled, y_train)
     predictions = model.predict(X_test_scaled)
-    print(f'type(y_test): {type(y_test)}')
-    print(f'y_test.shape: {y_test.shape}')
-    print(f'type(predictions) before: {type(predictions)}')
-    print(f'predictions.shape before: {predictions.shape}')
-    if name != 'KNNReg':
-        predictions = pd.DataFrame({'y_hat': predictions})
-    print(f'type(predictions): {type(predictions)}')
-    print(f'predictions.shape: {predictions.shape}')
-    predictions = y_scaler.inverse_transform(predictions)
     mse = mean_squared_error(y_test, predictions)
     results.append({"Model": name, "MSE": mse})
 
@@ -80,7 +69,7 @@ print(results_df)
 best_model_name = results_df.sort_values(by="MSE").iloc[0]["Model"]
 print(f"\nBest model: {best_model_name}")
 best_model = models[best_model_name]
-joblib.dump(best_model, f"local/{best_model_name.replace(' ', '_').lower()}_model.pkl")
+joblib.dump(best_model, f"local/{best_model_name.replace(' ', '_').lower()}_model.joblib")
 
 # Save the scaler
 joblib.dump(scaler, "local/scaler.pkl")
