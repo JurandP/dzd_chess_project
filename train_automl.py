@@ -69,7 +69,7 @@ for i, model in enumerate(tuned_models, start=1):
     print(f"MSE for Tuned Model {i} ({model.__class__.__name__}): {mse}")
 
     # (Optional) Save the tuned model to disk
-    save_model(model, f'tuned_regression_model_{i}')
+    save_model(model, f'local/tuned_regression_model_{i}')
     print(f"Tuned model {i} saved as 'tuned_regression_model_{i}.pkl'")
 
 print("Top 3 tuned models have been evaluated and saved.")
