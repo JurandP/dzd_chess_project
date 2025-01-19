@@ -1,46 +1,112 @@
 from pycaret.regression import load_model, predict_model
 from sklearn.metrics import mean_squared_error
+from sklearn.preprocessing import StandardScaler
 import pandas as pd
 import joblib
+import os
+import argparse
 
-# Define the dataset folder
-dataset_folder = "../dataset/"
 
-print("Loading dataset...")
-# Load testing data
-X_test = pd.read_csv(f"{dataset_folder}X_test.csv")
-y_test = pd.read_csv(f"{dataset_folder}y_test.csv")
-print("Dataset loaded.")
+def predict(X_train, y_train, X_test, y_test, model_path, model_type="automl"):
+    model_name = os.path.splitext(os.path.basename(model_path))[0]
 
-# Ensure y_test is a Series (1D) rather than a DataFrame
-if y_test.shape[1] == 1:
-    y_test = y_test.iloc[:, 0]
+    if model_type == "automl":
+        # Load the PyCaret-tuned model
+        model_path = model_path[:-4]
+        model = load_model(model_path, verbose=False)
 
-# Load the PyCaret-tuned model
-model = load_model('local/tuned_regression_model_1')
+        # Make predictions on the train set
+        predictions_train = predict_model(model, data=X_train)
+        mse_train = mean_squared_error(y_train, predictions_train["prediction_label"])
 
-# Make predictions on the test set
-predictions = predict_model(model, data=X_test)
+        # Make predictions on the test set
+        predictions_test = predict_model(model, data=X_test)
+        mse_test = mean_squared_error(y_test, predictions_test["prediction_label"])
 
-# Calculate Mean Squared Error
-mse = mean_squared_error(y_test, predictions['prediction_label'])
-print(f"Mean Squared Error: {mse}")
+    elif model_type == "manual":
 
-# Load the saved model and scalers
-model_path = "local/random_forest_model.joblib"  # Replace with your saved model's filename
-scaler_path = "local/scaler.pkl"
+        model = joblib.load(model_path)
 
-print("Loading model and scalers...")
-model = joblib.load(model_path)
-scaler = joblib.load(scaler_path)
-print("Model and scalers loaded.")
+        # Make predictions on the train set
+        predictions = model.predict(X_train)
+        mse_train = mean_squared_error(y_train, predictions)
 
-# Standardize test features
-X_test_scaled = scaler.transform(X_test)
+        # Make predictions on the test set
+        predictions = model.predict(X_test)
+        mse_test = mean_squared_error(y_test, predictions)
 
-# Make predictions
-print("Making predictions...")
-predictions = model.predict(X_test_scaled)
-predictions = pd.DataFrame({'y_hat': predictions})
-mse = mean_squared_error(y_test, predictions)
-print(f"Mean Squared Error: {mse}")
+    return model_name, mse_train, mse_test
+
+
+def main(config):
+    # Define the dataset folder
+    dataset_folder = f"../dataset/{config.n_rows}"
+
+    print("Loading dataset...")
+    # Load training and testing data
+    X_train = pd.read_csv(f"{dataset_folder}X_train.csv")
+    X_test = pd.read_csv(f"{dataset_folder}X_test.csv")
+    y_train = pd.read_csv(f"{dataset_folder}y_train.csv")
+    y_test = pd.read_csv(f"{dataset_folder}y_test.csv")
+    print("Dataset loaded.")
+
+    print(f"X train shape: {X_train.shape}")
+    print(f"y train shape: {y_train.shape}")
+    print(f"X test shape: {X_test.shape}")
+    print(f"y test shape: {y_test.shape}")
+
+    # Standardize features
+    scaler = StandardScaler()
+    y_scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
+    results = {
+        "model": [],
+        "MSE-train": [],
+        "MSE-test": [],
+        "tuning mode": [],
+    }
+
+    for model_type in os.listdir("models"):
+        if model_type in ['automl', 'manual']:
+            print(model_type)
+            model_dir = os.path.join("models", model_type)
+            for model_file in os.listdir(model_dir):
+                # print(f"model file: {model_file}")
+                model_path = os.path.join(model_dir, model_file)
+                if model_type == "automl":
+                    model_name, mse_train, mse_test = predict(
+                        X_train,
+                        y_train,
+                        X_test,
+                        y_test,
+                        model_path=model_path,
+                        model_type=model_type,
+                    )
+                else:
+                    model_name, mse_train, mse_test = predict(
+                        X_train_scaled,
+                        y_train,
+                        X_test_scaled,
+                        y_test,
+                        model_path=model_path,
+                        model_type=model_type,
+                    )
+                print(f"{model_name}\t{mse_train:.0f}\t{mse_test:.0f}")
+                results["model"].append(model_name)
+                results["MSE-train"].append(mse_train)
+                results["MSE-test"].append(mse_test)
+                results["tuning mode"].append(model_type)
+
+    results = pd.DataFrame(results)
+    results = results.sort_values("MSE-test", ascending=True)
+    print(results)
+    results.to_csv("model_search.csv", index=False)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--n_rows", type=int, default=5000)
+    config = parser.parse_args()
+    main(config)
