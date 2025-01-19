@@ -1,4 +1,5 @@
 pandas
+pandarallel
 python-chess
 scikit-learn
 numpy

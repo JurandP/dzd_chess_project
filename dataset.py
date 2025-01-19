@@ -21,9 +21,8 @@ def main(config):
     engine_path = (
         "../stockfish-ubuntu-x86-64-avx2/stockfish/stockfish-ubuntu-x86-64-avx2"
     )
-    engine = chess.engine.SimpleEngine.popen_uci(engine_path)
 
-    X, y = get_features(df=data, chess_engine=engine)
+    X, y = get_features(df=data, engine_path=engine_path)
 
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=0.2, random_state=42
@@ -38,7 +37,6 @@ def main(config):
     y_test.to_csv(f"{dataset_folder}/y_test.csv", index=False)
     print("Dataset saved.")
 
-    engine.close()
     time_taken = (time.time() - start_time) / 60
     print(f"creating dataset from {n_rows} rows took {time_taken:.2f} min")
 
