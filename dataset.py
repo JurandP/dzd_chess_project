@@ -32,10 +32,10 @@ def main(config):
     print("Saving dataset...")
     dataset_folder = f"../dataset/{n_rows}"
     os.makedirs(dataset_folder, exist_ok=True)
-    X_train.to_csv(f"{dataset_folder}X_train.csv", index=False)
-    X_test.to_csv(f"{dataset_folder}X_test.csv", index=False)
-    y_train.to_csv(f"{dataset_folder}y_train.csv", index=False)
-    y_test.to_csv(f"{dataset_folder}y_test.csv", index=False)
+    X_train.to_csv(f"{dataset_folder}/X_train.csv", index=False)
+    X_test.to_csv(f"{dataset_folder}/X_test.csv", index=False)
+    y_train.to_csv(f"{dataset_folder}/y_train.csv", index=False)
+    y_test.to_csv(f"{dataset_folder}/y_test.csv", index=False)
     print("Dataset saved.")
 
     engine.close()
